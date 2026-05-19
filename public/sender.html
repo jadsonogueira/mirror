@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Church Mirror — Púlpito</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f172a; color: #f1f5f9;
+      font-family: system-ui, sans-serif;
+      min-height: 100vh; display: flex;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .card {
+      background: #1e293b; border-radius: 20px;
+      padding: 40px 32px; width: 100%; max-width: 400px;
+      text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .logo { margin-bottom: 8px; line-height: 0; }
+    .logo svg { display: block; margin: 0 auto; }
+    .subtitle { font-size: 0.9rem; color: #94a3b8; margin-bottom: 8px; }
+    .room-badge {
+      display: inline-block; background: #0f172a; border-radius: 8px;
+      padding: 4px 14px; font-size: 1rem; font-weight: 700;
+      letter-spacing: 0.12em; color: #7dd3fc; margin-bottom: 24px;
+    }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #0f172a; border-radius: 999px;
+      padding: 6px 16px; font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; animation: pulse 1.5s infinite; }
+    .dot.online { background: #22c55e; animation: none; }
+    .dot.waiting { background: #f59e0b; animation: pulse 0.8s infinite; }
+    .dot.streaming { background: #3b82f6; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    #receivers-list { width: 100%; margin-bottom: 16px; display: none; flex-direction: column; gap: 8px; }
+    .receiver-item { display: flex; align-items: center; justify-content: space-between; background: #0f172a; border-radius: 10px; padding: 10px 14px; font-size: 0.85rem; }
+    .receiver-item .name { color: #94a3b8; }
+    .tag { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+    .tag-waiting { background: #451a03; color: #fb923c; }
+    .tag-streaming { background: #052e16; color: #4ade80; }
+    .tag-denied { background: #2d1b1b; color: #f87171; }
+
+    .btn {
+      width: 100%; padding: 16px; border-radius: 14px; border: none;
+      font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+      margin-bottom: 10px;
+    }
+    .btn:disabled { background: #334155 !important; color: #64748b !important; cursor: not-allowed; }
+    .btn-blue { background: #3b82f6; color: #fff; }
+    .btn-blue:hover:not(:disabled) { background: #2563eb; }
+    .btn-green { background: #22c55e; color: #fff; }
+    .btn-green:hover:not(:disabled) { background: #16a34a; }
+    .btn-red { background: #ef4444; color: #fff; }
+    .btn-red:hover { background: #dc2626; }
+    .btn-gray { background: #334155; color: #94a3b8; }
+    .btn-gray:hover:not(:disabled) { background: #475569; color: #f1f5f9; }
+
+    #media-controls { display: none; flex-direction: column; gap: 10px; width: 100%; }
+    .media-row { display: flex; gap: 10px; }
+    .media-row .btn { margin-bottom: 0; }
+
+    #send-progress { display: none; margin-bottom: 12px; }
+    #prog-bar-wrap { width: 100%; height: 6px; background: #0f172a; border-radius: 999px; overflow: hidden; margin-top: 6px; }
+    #prog-bar { height: 100%; background: #3b82f6; border-radius: 999px; width: 0%; transition: width 0.1s; }
+    #prog-label { font-size: 0.8rem; color: #94a3b8; text-align: left; }
+
+    #preview { width: 100%; border-radius: 10px; margin-top: 16px; display: none; background: #000; aspect-ratio: 16/9; object-fit: contain; }
+
+    .hint { font-size: 0.78rem; color: #475569; margin-top: 16px; line-height: 1.5; }
+    .divider { width: 100%; height: 1px; background: #1e3a5f; margin: 12px 0; }
+
+    #room-entry { margin-bottom: 20px; }
+    #room-entry input {
+      width: 100%; padding: 12px 16px; border-radius: 10px;
+      background: #0f172a; border: 1px solid #334155; color: #f1f5f9;
+      font-size: 1.2rem; text-align: center; letter-spacing: 0.15em; text-transform: uppercase; transition: border-color 0.2s;
+    }
+    #room-entry input.discovered { border-color: #22c55e; color: #22c55e; }
+    #discover-hint { display: none; font-size: 0.78rem; color: #22c55e; margin-top: 6px; margin-bottom: 2px; }
+    #room-entry .btn { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="265 45 270 270" height="80" style="display:block;margin:0 auto;">
+        <defs>
+          <filter id="glassEffect" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur" />
+            <feSpecularLighting in="blur" surfaceScale="5" specularConstant="0.75" specularExponent="20" lighting-color="#bbbbbb" result="specOut">
+              <fePointLight x="-5000" y="-10000" z="20000" />
+            </feSpecularLighting>
+            <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut" />
+            <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" />
+          </filter>
+          <filter id="dropShadow" x="-20%" y="-20%" width="150%" height="150%">
+            <feDropShadow dx="0" dy="4" stdDeviation="5" flood-opacity="0.3"/>
+          </filter>
+        </defs>
+        <rect width="800" height="500" fill="#3D4246" />
+        <g transform="translate(400, 180)" filter="url(#dropShadow)">
+          <path d="M -40,-40 L 40,-40 L 40,-120 Q 40,-130 30,-130 L -30,-130 Q -40,-130 -40,-120 Z" fill="#FFD700" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+          <polygon points="-10,-105 15,-85 -10,-65" fill="#1a1a1a" opacity="0.7"/>
+          <path d="M -40,-40 L -40,40 L -120,40 Q -130,40 -130,30 L -130,-30 Q -130,-40 -120,-40 Z" fill="#1E90FF" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+          <rect x="-105" y="-20" width="30" height="40" rx="2" fill="#1a1a1a" opacity="0.7"/>
+          <line x1="-95" y1="-10" x2="-80" y2="-10" stroke="#3D4246" stroke-width="2"/>
+          <line x1="-95" y1="0" x2="-80" y2="0" stroke="#3D4246" stroke-width="2"/>
+          <path d="M 40,-40 L 40,40 L 120,40 Q 130,40 130,30 L 130,-30 Q 130,-40 120,-40 Z" fill="#DC143C" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+          <circle cx="85" cy="0" r="22" fill="#1a1a1a" opacity="0.7"/>
+          <circle cx="85" cy="0" r="10" fill="#DC143C"/>
+          <circle cx="85" cy="-12" r="3" fill="#3D4246"/>
+          <circle cx="85" cy="12" r="3" fill="#3D4246"/>
+          <path d="M -40,40 L 40,40 L 40,120 Q 40,130 30,130 L -30,130 Q -40,130 -40,120 Z" fill="#228B22" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+          <rect x="-25" y="65" width="50" height="35" rx="3" fill="#1a1a1a" opacity="0.7"/>
+          <circle cx="0" cy="82.5" r="8" fill="#228B22"/>
+          <line x1="-40" y1="-40" x2="40" y2="40" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="40" y1="-40" x2="-40" y2="40" stroke="#1a1a1a" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+    <p class="subtitle">Transmissor — Púlpito</p>
+
+    <div id="room-entry" style="display:none">
+      <p id="discover-hint">&#10003; Projetor encontrado na rede</p>
+      <input id="room-input" maxlength="6" placeholder="Código da sala" oninput="this.value=this.value.toUpperCase()" />
+      <button class="btn btn-blue" onclick="enterRoom()">Conectar</button>
+    </div>
+
+    <div id="main" style="display:none">
+      <div class="room-badge" id="room-display"></div>
+      <div class="status-badge">
+        <span class="dot" id="dot"></span>
+        <span id="status-label">Conectando...</span>
+      </div>
+
+      <div id="receivers-list"></div>
+
+      <button class="btn btn-blue" id="btn-share" style="display:none" disabled>&#128247; Compartilhar Tela</button>
+      <button class="btn btn-green" id="btn-media" disabled>&#127916; Apresentar Mídia</button>
+      <input type="file" id="file-input" accept="video/*,audio/*,image/*,application/pdf" style="display:none" />
+
+      <div id="youtube-section" style="display:none;width:100%;margin-bottom:10px">
+        <div style="display:flex;gap:8px">
+          <input id="youtube-input" type="text" placeholder="URL do YouTube" style="flex:1;padding:10px 12px;border-radius:10px;background:#0f172a;border:1px solid #334155;color:#f1f5f9;font-size:0.9rem;" />
+          <button class="btn btn-red" id="btn-youtube-send" style="width:auto;padding:10px 16px;margin-bottom:0">&#9654;</button>
+        </div>
+      </div>
+      <button class="btn btn-gray" id="btn-youtube" disabled style="margin-bottom:10px">&#127909; YouTube</button>
+
+      <div id="send-progress">
+        <div id="prog-label">Enviando...</div>
+        <div id="prog-bar-wrap"><div id="prog-bar"></div></div>
+      </div>
+
+      <div id="media-controls">
+        <div id="video-controls">
+          <div class="media-row">
+            <button class="btn btn-blue" id="btn-play">&#9654; Play</button>
+            <button class="btn btn-gray" id="btn-pause">&#9646;&#9646; Pause</button>
+          </div>
+        </div>
+        <div id="pdf-controls" style="display:none">
+          <div id="pdf-page-info" style="font-size:0.85rem;color:#94a3b8;margin-bottom:8px">Página 1 de 1</div>
+          <div class="media-row">
+            <button class="btn btn-gray" id="btn-prev">&#8592; Anterior</button>
+            <button class="btn btn-blue" id="btn-next">Próxima &#8594;</button>
+          </div>
+          <button class="btn btn-gray" id="btn-rotate" style="margin-top:4px">&#8635; Girar 90°</button>
+        </div>
+        <button class="btn btn-red" id="btn-stop-media" style="margin-top:4px">&#9632; Parar</button>
+      </div>
+
+      <div class="divider" id="divider-stop" style="display:none"></div>
+      <button class="btn btn-red" id="btn-stop" style="display:none">&#9632; Parar Transmissão</button>
+
+      <video id="preview" autoplay muted playsinline></video>
+      <p class="hint" id="hint-text"></p>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const ICE_SERVERS = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ];
+
+    const canScreenShare = !!navigator.mediaDevices?.getDisplayMedia;
+    let room = location.hash.slice(1).toUpperCase();
+
+    if (!room) {
+      fetch('/discover')
+        .then(r => r.json())
+        .then(({ room: found }) => {
+          if (found) {
+            const input = document.getElementById('room-input');
+            input.value = found;
+            input.classList.add('discovered');
+            document.getElementById('discover-hint').style.display = 'block';
+          }
+          document.getElementById('room-entry').style.display = 'block';
+        })
+        .catch(() => { document.getElementById('room-entry').style.display = 'block'; });
+    } else {
+      initSender(room);
+    }
+
+    function enterRoom() {
+      const code = document.getElementById('room-input').value.trim().toUpperCase();
+      if (code.length < 4) return;
+      history.replaceState(null, '', '#' + code);
+      document.getElementById('room-entry').style.display = 'none';
+      initSender(code);
+    }
+
+    function initSender(roomCode) {
+      room = roomCode;
+      document.getElementById('main').style.display = 'block';
+      document.getElementById('room-display').textContent = room;
+
+      const btnShare = document.getElementById('btn-share');
+      const btnMedia = document.getElementById('btn-media');
+      const btnStop = document.getElementById('btn-stop');
+      const btnStopMedia = document.getElementById('btn-stop-media');
+      const fileInput = document.getElementById('file-input');
+      const sendProgress = document.getElementById('send-progress');
+      const progBar = document.getElementById('prog-bar');
+      const progLabel = document.getElementById('prog-label');
+      const mediaControls = document.getElementById('media-controls');
+      const dividerStop = document.getElementById('divider-stop');
+      const preview = document.getElementById('preview');
+      const hint = document.getElementById('hint-text');
+      const receiversList = document.getElementById('receivers-list');
+      const dot = document.getElementById('dot');
+      const label = document.getElementById('status-label');
+
+      if (canScreenShare) {
+        btnShare.style.display = 'block';
+        hint.textContent = 'Compartilhe a tela ou envie um arquivo de vídeo, áudio, imagem ou PDF para o projetor.';
+      } else {
+        hint.textContent = 'Selecione um vídeo, áudio, imagem ou PDF da sua galeria para apresentar no projetor.';
+      }
+
+      const peers = new Map();
+      let stream = null;
+      let receiverCount = 0;
+      let activeMode = null;
+      let awaitingApproval = false;
+      const socket = io();
+
+      function setStatus(state, text) {
+        dot.className = 'dot' + (state ? ` ${state}` : '');
+        label.textContent = text;
+      }
+
+      function updateReceiversUI() {
+        if (peers.size === 0) { receiversList.style.display = 'none'; return; }
+        receiversList.style.display = 'flex';
+        receiversList.innerHTML = '';
+        let i = 1;
+        peers.forEach(({ state }) => {
+          const el = document.createElement('div');
+          el.className = 'receiver-item';
+          const cls = state === 'streaming' ? 'tag-streaming' : state === 'denied' ? 'tag-denied' : 'tag-waiting';
+          const txt = state === 'streaming' ? 'Ao vivo' : state === 'denied' ? 'Recusado' : 'Aguardando';
+          el.innerHTML = `<span class="name">Projetor ${i}</span><span class="tag ${cls}">${txt}</span>`;
+          receiversList.appendChild(el);
+          i++;
+        });
+      }
+
+      socket.on('connect', () => {
+        setStatus('', 'Aguardando projetor...');
+        socket.emit('register', { role: 'sender', room });
+        // Reconnected while waiting for approval — re-send the request
+        if (awaitingApproval && activeMode) {
+          socket.emit('connection-request', { mode: activeMode });
+        }
+      });
+
+      socket.on('receivers-online', ({ count }) => {
+        receiverCount = count;
+        setStatus('online', `${count} projetor${count > 1 ? 'es' : ''} conectado${count > 1 ? 's' : ''}`);
+        btnShare.disabled = false;
+        btnMedia.disabled = false;
+        document.getElementById('btn-youtube').disabled = false;
+      });
+
+      socket.on('receiver-joined', ({ receiverId }) => {
+        receiverCount++;
+        setStatus('online', `${receiverCount} projetor${receiverCount > 1 ? 'es' : ''} conectado${receiverCount > 1 ? 's' : ''}`);
+        btnShare.disabled = false;
+        btnMedia.disabled = false;
+        document.getElementById('btn-youtube').disabled = false;
+      });
+
+      socket.on('receiver-left', ({ receiverId }) => {
+        peers.get(receiverId)?.pc?.close();
+        peers.delete(receiverId);
+        receiverCount = Math.max(0, receiverCount - 1);
+        updateReceiversUI();
+        if (receiverCount === 0) { setStatus('', 'Nenhum projetor conectado'); btnShare.disabled = true; btnMedia.disabled = true; }
+        else setStatus('online', `${receiverCount} projetor${receiverCount > 1 ? 'es' : ''} conectado${receiverCount > 1 ? 's' : ''}`);
+      });
+
+      socket.on('receivers-offline', () => {
+        peers.forEach(({ pc }) => pc?.close());
+        peers.clear();
+        receiverCount = 0;
+        setStatus('', 'Nenhum projetor conectado');
+        btnShare.disabled = true; btnMedia.disabled = true;
+        document.getElementById('btn-youtube').disabled = true;
+        updateReceiversUI();
+        stopAll();
+      });
+
+      socket.on('receiver-approved', ({ receiverId }) => {
+        awaitingApproval = false;
+        socket.emit('client-log', `receiver-approved: activeMode=${activeMode} receiverId=${receiverId}`);
+        peers.set(receiverId, { pc: null, dc: null, state: 'connecting' });
+        if (activeMode === 'screen') connectScreenReceiver(receiverId).catch(e => socket.emit('client-log', `connectScreen error: ${e}`));
+        else if (activeMode === 'media') connectMediaReceiver(receiverId).catch(e => socket.emit('client-log', `connectMedia error: ${e}`));
+        else socket.emit('client-log', `receiver-approved: no activeMode set!`);
+      });
+
+      socket.on('answer', async ({ answer, receiverId }) => {
+        await peers.get(receiverId)?.pc?.setRemoteDescription(answer);
+      });
+
+      socket.on('ice-candidate', ({ candidate, from }) => {
+        peers.get(from)?.pc?.addIceCandidate(candidate).catch(() => {});
+      });
+
+      // ── Screen share ──
+      btnShare.addEventListener('click', async () => {
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true });
+        } catch {
+          alert('Não foi possível capturar a tela. Verifique as permissões.');
+          return;
+        }
+        activeMode = 'screen';
+        awaitingApproval = true;
+        preview.srcObject = stream;
+        preview.style.display = 'block';
+        btnShare.style.display = 'none';
+        btnMedia.style.display = 'none';
+        dividerStop.style.display = 'block';
+        btnStop.style.display = 'block';
+        setStatus('waiting', 'Aguardando autorização...');
+        socket.emit('connection-request', { mode: 'screen' });
+        stream.getTracks().forEach(t => { t.onended = stopAll; });
+      });
+
+      async function connectScreenReceiver(receiverId) {
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        peers.get(receiverId).pc = pc;
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        pc.onicecandidate = (e) => { if (e.candidate) socket.emit('ice-candidate', { candidate: e.candidate, target: receiverId }); };
+        pc.onconnectionstatechange = () => {
+          if (pc.connectionState === 'connected') {
+            peers.get(receiverId).state = 'streaming';
+            const active = [...peers.values()].filter(p => p.state === 'streaming').length;
+            setStatus('streaming', `Transmitindo para ${active} projetor${active > 1 ? 'es' : ''}`);
+            updateReceiversUI();
+          }
+          if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            peers.delete(receiverId); updateReceiversUI();
+          }
+        };
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('offer', { offer, receiverId });
+        updateReceiversUI();
+      }
+
+      // ── Media file ──
+      btnMedia.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        fileInput.value = '';
+        activeMode = 'media';
+        awaitingApproval = true;
+        btnShare.style.display = 'none';
+        btnMedia.style.display = 'none';
+        setStatus('waiting', 'Aguardando autorização...');
+        socket.emit('connection-request', { mode: 'media' });
+        socket._pendingFile = file;
+      });
+
+      async function connectMediaReceiver(receiverId) {
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const dc = pc.createDataChannel('file', { ordered: true });
+        peers.get(receiverId).pc = pc;
+        peers.get(receiverId).dc = dc;
+
+        dc.onopen = async () => {
+          peers.get(receiverId).state = 'streaming';
+          updateReceiversUI();
+          const active = [...peers.values()].filter(p => p.state === 'streaming').length;
+          setStatus('streaming', `Enviando para ${active} projetor${active > 1 ? 'es' : ''}...`);
+
+          const file = socket._pendingFile;
+          if (!file) return;
+
+          sendProgress.style.display = 'block';
+          progBar.style.width = '0%';
+          progLabel.textContent = 'Preparando...';
+
+          const fileData = await file.arrayBuffer();
+          dc.send(JSON.stringify({ type: 'file-start', name: file.name, size: fileData.byteLength, mimeType: file.type }));
+
+          const CHUNK = 16 * 1024;
+          const HIGH = 256 * 1024;
+          const LOW  =  64 * 1024;
+          dc.bufferedAmountLowThreshold = LOW;
+          let offset = 0;
+
+          function sendChunks() {
+            while (offset < fileData.byteLength) {
+              if (dc.bufferedAmount >= HIGH) return;
+              const end = Math.min(offset + CHUNK, fileData.byteLength);
+              dc.send(fileData.slice(offset, end));
+              offset = end;
+              const pct = Math.round((offset / fileData.byteLength) * 100);
+              progBar.style.width = pct + '%';
+              progLabel.textContent = `Enviando... ${pct}%`;
+            }
+            dc.onbufferedamountlow = null;
+            setTimeout(() => {
+              dc.send(JSON.stringify({ type: 'file-end' }));
+              sendProgress.style.display = 'none';
+              const isPDF = file.type === 'application/pdf';
+              document.getElementById('video-controls').style.display = isPDF ? 'none' : 'block';
+              document.getElementById('pdf-controls').style.display = isPDF ? 'block' : 'none';
+              mediaControls.style.display = 'flex';
+              dividerStop.style.display = 'block';
+              btnStop.style.display = 'block';
+              setStatus('streaming', `Apresentando em ${[...peers.values()].filter(p => p.state === 'streaming').length} projetor${peers.size > 1 ? 'es' : ''}`);
+              socket._pendingFile = null;
+            }, 300);
+          }
+
+          dc.onbufferedamountlow = sendChunks;
+          sendChunks();
+        };
+
+        pc.onicecandidate = (e) => { if (e.candidate) socket.emit('ice-candidate', { candidate: e.candidate, target: receiverId }); };
+        pc.onconnectionstatechange = () => {
+          if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            peers.delete(receiverId); updateReceiversUI();
+          }
+        };
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('offer', { offer, receiverId });
+        updateReceiversUI();
+      }
+
+      let pdfTotalPages = 0;
+      let pdfCurrentPage = 1;
+
+      function broadcastControl(action, extra = {}) {
+        peers.forEach((_, rid) => socket.emit('media-control', { action, receiverId: rid, ...extra }));
+      }
+
+      document.getElementById('btn-play').addEventListener('click', () => broadcastControl('play'));
+      document.getElementById('btn-pause').addEventListener('click', () => broadcastControl('pause'));
+
+      document.getElementById('btn-prev').addEventListener('click', () => {
+        if (pdfCurrentPage <= 1) return;
+        pdfCurrentPage--;
+        broadcastControl('page', { page: pdfCurrentPage });
+        updatePdfUI();
+      });
+      document.getElementById('btn-next').addEventListener('click', () => {
+        if (pdfCurrentPage >= pdfTotalPages) return;
+        pdfCurrentPage++;
+        broadcastControl('page', { page: pdfCurrentPage });
+        updatePdfUI();
+      });
+      document.getElementById('btn-rotate').addEventListener('click', () => broadcastControl('rotate'));
+
+      function updatePdfUI() {
+        document.getElementById('pdf-page-info').textContent = `Página ${pdfCurrentPage} de ${pdfTotalPages}`;
+        document.getElementById('btn-prev').disabled = pdfCurrentPage <= 1;
+        document.getElementById('btn-next').disabled = pdfCurrentPage >= pdfTotalPages;
+      }
+
+      socket.on('pdf-ready', ({ pages }) => {
+        pdfTotalPages = pages;
+        pdfCurrentPage = 1;
+        updatePdfUI();
+      });
+
+      document.getElementById('btn-youtube').addEventListener('click', () => {
+        const sec = document.getElementById('youtube-section');
+        sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+        if (sec.style.display === 'block') document.getElementById('youtube-input').focus();
+      });
+
+      document.getElementById('btn-youtube-send').addEventListener('click', () => {
+        const url = document.getElementById('youtube-input').value.trim();
+        if (!url) return;
+        socket.emit('youtube-url', { url });
+        document.getElementById('youtube-input').value = '';
+        document.getElementById('youtube-section').style.display = 'none';
+        setStatus('streaming', 'YouTube enviado ao projetor');
+      });
+
+      document.getElementById('youtube-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('btn-youtube-send').click();
+      });
+
+      btnStopMedia.addEventListener('click', stopAll);
+      btnStop.addEventListener('click', stopAll);
+
+      function stopAll() {
+        stream?.getTracks().forEach(t => t.stop());
+        peers.forEach(({ pc }) => pc?.close());
+        peers.clear();
+        stream = null; activeMode = null; awaitingApproval = false;
+        socket._pendingFile = null;
+        preview.srcObject = null; preview.style.display = 'none';
+        sendProgress.style.display = 'none';
+        mediaControls.style.display = 'none';
+        btnStop.style.display = 'none';
+        dividerStop.style.display = 'none';
+        if (canScreenShare) btnShare.style.display = 'block';
+        btnMedia.style.display = 'block';
+        updateReceiversUI();
+        if (receiverCount > 0) setStatus('online', `${receiverCount} projetor${receiverCount > 1 ? 'es' : ''} conectado${receiverCount > 1 ? 's' : ''}`);
+      }
+    }
+  </script>
+</body>
+</html>

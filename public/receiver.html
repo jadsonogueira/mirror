@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Church Mirror — Projetor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000; color: #fff;
+      font-family: system-ui, sans-serif;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #video { width: 100vw; height: 100vh; object-fit: contain; display: none; }
+    #img-display { width: 100vw; height: 100vh; object-fit: contain; display: none; }
+    #progress-overlay {
+      display: none; position: fixed; inset: 0; z-index: 50;
+      background: rgba(0,0,0,0.85);
+      align-items: center; justify-content: center; flex-direction: column; gap: 20px;
+    }
+    #progress-overlay.visible { display: flex; }
+    #progress-bar-wrap { width: 280px; height: 8px; background: #1e293b; border-radius: 999px; overflow: hidden; }
+    #progress-bar { height: 100%; background: #3b82f6; border-radius: 999px; width: 0%; transition: width 0.2s; }
+    #progress-label { font-size: 1rem; color: #94a3b8; }
+
+    #status {
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+    }
+    h1 { font-size: 1.4rem; font-weight: 600; }
+    .room-code { font-size: 2.5rem; font-weight: 800; letter-spacing: 0.15em; }
+    p { font-size: 0.9rem; opacity: 0.55; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block; margin-right: 8px; animation: pulse 1.5s infinite; }
+    .dot.connected { background: #22c55e; animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    #auth-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.75);
+      align-items: center; justify-content: center;
+    }
+    #auth-overlay.visible { display: flex; }
+    #auth-box {
+      background: #1e293b; border-radius: 20px;
+      padding: 40px 36px; text-align: center; max-width: 360px; width: 90%;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6); animation: pop-in 0.2s ease;
+    }
+    @keyframes pop-in { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+    #auth-box .icon { font-size: 2.8rem; margin-bottom: 12px; }
+    #auth-box h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+    #auth-box p { font-size: 0.9rem; color: #94a3b8; margin-bottom: 28px; }
+    .auth-buttons { display: flex; gap: 12px; }
+    .auth-buttons button {
+      flex: 1; padding: 14px; border-radius: 12px; border: none;
+      font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    #btn-accept { background: #22c55e; color: #fff; }
+    #btn-accept:hover { background: #16a34a; }
+    #btn-deny { background: #334155; color: #94a3b8; }
+    #btn-deny:hover { background: #ef4444; color: #fff; }
+  </style>
+</head>
+<body>
+  <div id="auth-overlay">
+    <div id="auth-box">
+      <div class="icon" id="auth-icon">&#128242;</div>
+      <h2>Pedido de conexão</h2>
+      <p id="auth-desc">Um dispositivo quer transmitir para este projetor. Deseja autorizar?</p>
+      <div class="auth-buttons">
+        <button id="btn-deny">Recusar</button>
+        <button id="btn-accept">Aceitar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="progress-overlay">
+    <div id="progress-label">Recebendo arquivo...</div>
+    <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+    <div id="progress-pct">0%</div>
+  </div>
+
+  <video id="video" autoplay playsinline></video>
+  <img id="img-display" />
+  <canvas id="pdf-canvas" style="display:none;max-width:100vw;max-height:100vh;object-fit:contain"></canvas>
+  <iframe id="yt-frame" style="display:none;width:100vw;height:100vh;border:none" allow="autoplay; fullscreen" allowfullscreen></iframe>
+  <div id="status">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="265 45 270 270" style="display:block;margin:0 auto;height:100px;width:auto;">
+      <defs>
+        <filter id="glassEffect" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur" />
+          <feSpecularLighting in="blur" surfaceScale="5" specularConstant="0.75" specularExponent="20" lighting-color="#bbbbbb" result="specOut">
+            <fePointLight x="-5000" y="-10000" z="20000" />
+          </feSpecularLighting>
+          <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut" />
+          <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" />
+        </filter>
+        <filter id="dropShadow" x="-20%" y="-20%" width="150%" height="150%">
+          <feDropShadow dx="0" dy="4" stdDeviation="5" flood-opacity="0.3"/>
+        </filter>
+      </defs>
+      <rect width="800" height="500" fill="#3D4246" />
+      <g transform="translate(400, 180)" filter="url(#dropShadow)">
+        <path d="M -40,-40 L 40,-40 L 40,-120 Q 40,-130 30,-130 L -30,-130 Q -40,-130 -40,-120 Z" fill="#FFD700" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+        <polygon points="-10,-105 15,-85 -10,-65" fill="#1a1a1a" opacity="0.7"/>
+        <path d="M -40,-40 L -40,40 L -120,40 Q -130,40 -130,30 L -130,-30 Q -130,-40 -120,-40 Z" fill="#1E90FF" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+        <rect x="-105" y="-20" width="30" height="40" rx="2" fill="#1a1a1a" opacity="0.7"/>
+        <line x1="-95" y1="-10" x2="-80" y2="-10" stroke="#3D4246" stroke-width="2"/>
+        <line x1="-95" y1="0" x2="-80" y2="0" stroke="#3D4246" stroke-width="2"/>
+        <path d="M 40,-40 L 40,40 L 120,40 Q 130,40 130,30 L 130,-30 Q 130,-40 120,-40 Z" fill="#DC143C" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="85" cy="0" r="22" fill="#1a1a1a" opacity="0.7"/>
+        <circle cx="85" cy="0" r="10" fill="#DC143C"/>
+        <circle cx="85" cy="-12" r="3" fill="#3D4246"/>
+        <circle cx="85" cy="12" r="3" fill="#3D4246"/>
+        <path d="M -40,40 L 40,40 L 40,120 Q 40,130 30,130 L -30,130 Q -40,130 -40,120 Z" fill="#228B22" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+        <rect x="-25" y="65" width="50" height="35" rx="3" fill="#1a1a1a" opacity="0.7"/>
+        <circle cx="0" cy="82.5" r="8" fill="#228B22"/>
+        <line x1="-40" y1="-40" x2="40" y2="40" stroke="#1a1a1a" stroke-width="2"/>
+        <line x1="40" y1="-40" x2="-40" y2="40" stroke="#1a1a1a" stroke-width="2"/>
+      </g>
+    </svg>
+    <img id="qr-img" style="border-radius:12px" />
+    <div class="room-code" id="room-display"></div>
+    <h1><span class="dot" id="dot"></span><span id="status-text">Aguardando transmissor...</span></h1>
+    <p>Abra o link no dispositivo do púlpito ou escaneie o QR code</p>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module" id="pdfjs-script"></script>
+  <script type="module">
+  let pdfjsLib = null;
+  try {
+    const mod = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+    pdfjsLib = mod;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+  } catch(e) {}
+  window._pdfjsLib = pdfjsLib;
+  </script>
+  <script>
+    let room = location.hash.slice(1);
+    if (!room) {
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      room = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      history.replaceState(null, '', '#' + room);
+    }
+    document.getElementById('room-display').textContent = room;
+    const senderUrl = `${location.origin}/sender.html#${room}`;
+    document.getElementById('qr-img').src = `/qr?url=${encodeURIComponent(senderUrl)}`;
+
+    const ICE_SERVERS = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ];
+
+    const socket = io();
+    const video = document.getElementById('video');
+    const imgDisplay = document.getElementById('img-display');
+    const statusEl = document.getElementById('status');
+    const statusText = document.getElementById('status-text');
+    const dot = document.getElementById('dot');
+    const authOverlay = document.getElementById('auth-overlay');
+    const progressOverlay = document.getElementById('progress-overlay');
+    const progressBar = document.getElementById('progress-bar');
+    const progressPct = document.getElementById('progress-pct');
+
+    let pc = null;
+    let pendingSenderId = null;
+    let pendingMode = 'screen';
+    let awaitingOffer = false;
+
+    // File reassembly state
+    let fileBuffer = [];
+    let fileMetadata = null;
+    let receivedBytes = 0;
+
+    // PDF state
+    let pdfDoc = null;
+    let pdfRotation = 0;
+    const pdfCanvas = document.getElementById('pdf-canvas');
+
+    socket.on('connect', () => {
+      socket.emit('register', { role: 'receiver', room });
+    });
+
+    socket.on('connection-request', ({ senderId, mode }) => {
+      // Sender reconnected after we already approved — auto-approve the new socket
+      if (awaitingOffer && (mode || 'screen') === pendingMode) {
+        socket.emit('connection-approved', { senderId });
+        return;
+      }
+      pendingSenderId = senderId;
+      pendingMode = mode || 'screen';
+      document.getElementById('auth-icon').textContent = mode === 'media' ? '🎬' : '📱';
+      document.getElementById('auth-desc').textContent = mode === 'media'
+        ? 'Um dispositivo quer apresentar uma mídia no projetor. Deseja autorizar?'
+        : 'Um dispositivo quer transmitir a tela para este projetor. Deseja autorizar?';
+      authOverlay.classList.add('visible');
+    });
+
+    document.getElementById('btn-accept').addEventListener('click', () => {
+      authOverlay.classList.remove('visible');
+      statusEl.style.display = 'flex';
+      statusText.textContent = 'Conectando...';
+      awaitingOffer = true;
+      socket.emit('connection-approved', { senderId: pendingSenderId });
+      pendingSenderId = null;
+    });
+
+    document.getElementById('btn-deny').addEventListener('click', () => {
+      authOverlay.classList.remove('visible');
+      socket.emit('connection-denied', { senderId: pendingSenderId });
+      pendingSenderId = null;
+    });
+
+    socket.on('offer', async ({ offer, senderId }) => {
+      awaitingOffer = false;
+      if (pc) { pc.close(); pc = null; }
+      const thisPc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      pc = thisPc;
+
+      thisPc.ondatachannel = (e) => {
+        const dc = e.channel;
+        dc.binaryType = 'arraybuffer';
+
+        dc.onmessage = (evt) => {
+          if (typeof evt.data === 'string') {
+            const msg = JSON.parse(evt.data);
+            if (msg.type === 'file-start') {
+              fileMetadata = msg;
+              fileBuffer = [];
+              receivedBytes = 0;
+              statusEl.style.display = 'none';
+              progressOverlay.classList.add('visible');
+              progressBar.style.width = '0%';
+              progressPct.textContent = '0%';
+            } else if (msg.type === 'file-end') {
+              const blob = new Blob(fileBuffer, { type: fileMetadata.mimeType });
+              const url = URL.createObjectURL(blob);
+              progressOverlay.classList.remove('visible');
+              showMedia(url, fileMetadata.mimeType, senderId);
+              fileBuffer = []; fileMetadata = null; receivedBytes = 0;
+            }
+          } else {
+            fileBuffer.push(evt.data);
+            receivedBytes += evt.data.byteLength;
+            if (fileMetadata) {
+              const pct = Math.round((receivedBytes / fileMetadata.size) * 100);
+              progressBar.style.width = pct + '%';
+              progressPct.textContent = pct + '%';
+            }
+          }
+        };
+      };
+
+      thisPc.onicecandidate = (e) => {
+        if (e.candidate) socket.emit('ice-candidate', { candidate: e.candidate, target: senderId });
+      };
+
+      thisPc.ontrack = (e) => {
+        video.srcObject = e.streams[0];
+        video.style.display = 'block';
+        imgDisplay.style.display = 'none';
+        statusEl.style.display = 'none';
+        dot.classList.add('connected');
+        statusText.textContent = 'Aguardando transmissor...';
+        e.streams[0].getTracks().forEach(t => { t.onended = reset; });
+      };
+
+      let disconnectTimer = null;
+      thisPc.onconnectionstatechange = () => {
+        if (thisPc.connectionState === 'connected') {
+          clearTimeout(disconnectTimer);
+          dot.classList.add('connected');
+        } else if (thisPc.connectionState === 'disconnected') {
+          disconnectTimer = setTimeout(() => { if (thisPc.connectionState === 'disconnected') reset(); }, 5000);
+        } else if (thisPc.connectionState === 'failed') {
+          clearTimeout(disconnectTimer);
+          reset();
+        }
+      };
+
+      await thisPc.setRemoteDescription(offer);
+      const answer = await thisPc.createAnswer();
+      if (pc !== thisPc) return; // stale — a newer offer arrived, discard this one
+      await thisPc.setLocalDescription(answer);
+      socket.emit('answer', { answer, senderId });
+    });
+
+    socket.on('ice-candidate', ({ candidate }) => {
+      pc?.addIceCandidate(candidate).catch(() => {});
+    });
+
+    socket.on('youtube-url', ({ url }) => {
+      const ytFrame = document.getElementById('yt-frame');
+      const videoId = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/)?.[1];
+      if (!videoId) return;
+      reset();
+      ytFrame.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      ytFrame.style.display = 'block';
+      statusEl.style.display = 'none';
+    });
+
+    socket.on('media-control', ({ action, page }) => {
+      if (action === 'play') video.play();
+      else if (action === 'pause') video.pause();
+      else if (action === 'stop') reset();
+      else if (action === 'page' && pdfDoc) renderPdfPage(page);
+      else if (action === 'rotate' && pdfDoc) {
+        pdfRotation = (pdfRotation + 90) % 360;
+        renderPdfPage(pdfDoc._currentPage || 1);
+      }
+    });
+
+    async function showMedia(url, mimeType, senderId) {
+      statusEl.style.display = 'none';
+      if (mimeType === 'application/pdf') {
+        const lib = window._pdfjsLib;
+        if (!lib) return;
+        pdfDoc = await lib.getDocument(url).promise;
+        pdfCanvas.style.display = 'block';
+        video.style.display = 'none';
+        imgDisplay.style.display = 'none';
+        await renderPdfPage(1);
+        socket.emit('pdf-ready', { pages: pdfDoc.numPages, senderId });
+      } else if (mimeType.startsWith('image/')) {
+        imgDisplay.src = url;
+        imgDisplay.style.display = 'block';
+        video.style.display = 'none';
+        pdfCanvas.style.display = 'none';
+      } else if (mimeType.startsWith('audio/')) {
+        video.srcObject = null;
+        video.src = url;
+        video.style.display = 'none';
+        imgDisplay.style.display = 'none';
+        pdfCanvas.style.display = 'none';
+        statusEl.style.display = 'flex';
+        dot.classList.add('connected');
+        statusText.textContent = '♪ Reproduzindo áudio...';
+        video.play();
+      } else {
+        video.srcObject = null;
+        video.src = url;
+        video.style.display = 'block';
+        imgDisplay.style.display = 'none';
+        pdfCanvas.style.display = 'none';
+        video.play();
+      }
+    }
+
+    async function renderPdfPage(pageNum) {
+      if (!pdfDoc) return;
+      pdfDoc._currentPage = pageNum;
+      const page = await pdfDoc.getPage(pageNum);
+      const baseViewport = page.getViewport({ scale: 1, rotation: pdfRotation });
+      const scale = Math.min(window.innerWidth / baseViewport.width,
+                             window.innerHeight / baseViewport.height);
+      const viewport = page.getViewport({ scale, rotation: pdfRotation });
+      pdfCanvas.width = viewport.width;
+      pdfCanvas.height = viewport.height;
+      const ctx = pdfCanvas.getContext('2d');
+      ctx.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+    }
+
+    function reset() {
+      awaitingOffer = false;
+      pendingMode = 'screen';
+      video.style.display = 'none';
+      video.src = ''; video.srcObject = null;
+      imgDisplay.style.display = 'none';
+      imgDisplay.src = '';
+      pdfCanvas.style.display = 'none';
+      pdfDoc = null;
+      pdfRotation = 0;
+      const ytFrame = document.getElementById('yt-frame');
+      ytFrame.style.display = 'none';
+      ytFrame.src = '';
+      progressOverlay.classList.remove('visible');
+      statusEl.style.display = 'flex';
+      dot.classList.remove('connected');
+      statusText.textContent = 'Aguardando transmissor...';
+      pc?.close(); pc = null;
+    }
+  </script>
+</body>
+</html>

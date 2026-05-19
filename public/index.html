@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Church Mirror</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f172a; color: #f1f5f9;
+      font-family: system-ui, sans-serif;
+      min-height: 100vh; display: flex;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .card {
+      background: #1e293b; border-radius: 20px;
+      padding: 48px 36px; width: 100%; max-width: 400px;
+      text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .logo { margin-bottom: 16px; line-height: 0; }
+    .logo svg { width: 100%; border-radius: 16px; }
+    p { color: #94a3b8; margin-bottom: 36px; font-size: 0.95rem; }
+    .btn {
+      display: block; width: 100%; padding: 16px;
+      border-radius: 14px; border: none;
+      font-size: 1rem; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s; margin-bottom: 12px;
+    }
+    .btn-receiver { background: #6366f1; color: #fff; }
+    .btn-receiver:hover { background: #4f46e5; transform: translateY(-1px); }
+    .btn-sender { background: #3b82f6; color: #fff; }
+    .btn-sender:hover { background: #2563eb; transform: translateY(-1px); }
+    .hint { font-size: 0.78rem; color: #475569; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+        <defs>
+          <filter id="glassEffect" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur" />
+            <feSpecularLighting in="blur" surfaceScale="5" specularConstant="0.75" specularExponent="20" lighting-color="#bbbbbb" result="specOut">
+              <fePointLight x="-5000" y="-10000" z="20000" />
+            </feSpecularLighting>
+            <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut" />
+            <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" />
+          </filter>
+          <filter id="dropShadow" x="-20%" y="-20%" width="150%" height="150%">
+            <feDropShadow dx="0" dy="4" stdDeviation="5" flood-opacity="0.3"/>
+          </filter>
+        </defs>
+        <rect width="800" height="500" fill="#3D4246" />
+        <g transform="translate(400, 180)" filter="url(#dropShadow)">
+          <path d="M -40,-40 L 40,-40 L 40,-120 Q 40,-130 30,-130 L -30,-130 Q -40,-130 -40,-120 Z" fill="#FFD700" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+          <polygon points="-10,-105 15,-85 -10,-65" fill="#1a1a1a" opacity="0.7"/>
+          <path d="M -40,-40 L -40,40 L -120,40 Q -130,40 -130,30 L -130,-30 Q -130,-40 -120,-40 Z" fill="#1E90FF" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+          <rect x="-105" y="-20" width="30" height="40" rx="2" fill="#1a1a1a" opacity="0.7"/>
+          <line x1="-95" y1="-10" x2="-80" y2="-10" stroke="#3D4246" stroke-width="2"/>
+          <line x1="-95" y1="0" x2="-80" y2="0" stroke="#3D4246" stroke-width="2"/>
+          <path d="M 40,-40 L 40,40 L 120,40 Q 130,40 130,30 L 130,-30 Q 130,-40 120,-40 Z" fill="#DC143C" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+          <circle cx="85" cy="0" r="22" fill="#1a1a1a" opacity="0.7"/>
+          <circle cx="85" cy="0" r="10" fill="#DC143C"/>
+          <circle cx="85" cy="-12" r="3" fill="#3D4246"/>
+          <circle cx="85" cy="12" r="3" fill="#3D4246"/>
+          <path d="M -40,40 L 40,40 L 40,120 Q 40,130 30,130 L -30,130 Q -40,130 -40,120 Z" fill="#228B22" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
+          <rect x="-25" y="65" width="50" height="35" rx="3" fill="#1a1a1a" opacity="0.7"/>
+          <circle cx="0" cy="82.5" r="8" fill="#228B22"/>
+          <line x1="-40" y1="-40" x2="40" y2="40" stroke="#1a1a1a" stroke-width="2"/>
+          <line x1="40" y1="-40" x2="-40" y2="40" stroke="#1a1a1a" stroke-width="2"/>
+        </g>
+        <g transform="translate(400, 380)" text-anchor="middle">
+          <text font-family="'Times New Roman',serif" font-size="62" font-weight="bold" fill="#FFFFFF" letter-spacing="2">CHURCH MIRROR</text>
+          <text y="50" font-family="Arial,sans-serif" font-size="16" font-weight="bold" fill="#A0AAB4" letter-spacing="8">AUDIO • VIDEO • PDF • PHOTOS</text>
+        </g>
+      </svg>
+    </div>
+    <p>Screen mirroring para projetor de igreja</p>
+    <a class="btn btn-receiver" href="/receiver.html">Abrir no Projetor</a>
+    <a class="btn btn-sender" href="/sender.html">Abrir no Púlpito</a>
+    <p class="hint">Ambos os dispositivos precisam estar na mesma rede ou com acesso à internet.</p>
+  </div>
+</body>
+</html>
