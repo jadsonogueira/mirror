@@ -85,37 +85,19 @@
   <canvas id="pdf-canvas" style="display:none;max-width:100vw;max-height:100vh;object-fit:contain"></canvas>
   <iframe id="yt-frame" style="display:none;width:100vw;height:100vh;border:none" allow="autoplay; fullscreen" allowfullscreen></iframe>
   <div id="status">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="265 45 270 270" style="display:block;margin:0 auto;height:100px;width:auto;">
-      <defs>
-        <filter id="glassEffect" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur" />
-          <feSpecularLighting in="blur" surfaceScale="5" specularConstant="0.75" specularExponent="20" lighting-color="#bbbbbb" result="specOut">
-            <fePointLight x="-5000" y="-10000" z="20000" />
-          </feSpecularLighting>
-          <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut" />
-          <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" />
-        </filter>
-        <filter id="dropShadow" x="-20%" y="-20%" width="150%" height="150%">
-          <feDropShadow dx="0" dy="4" stdDeviation="5" flood-opacity="0.3"/>
-        </filter>
-      </defs>
-      <g transform="translate(400, 180)" filter="url(#dropShadow)">
-        <path d="M -40,-40 L 40,-40 L 40,-120 Q 40,-130 30,-130 L -30,-130 Q -40,-130 -40,-120 Z" fill="#FFD700" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
-        <polygon points="-10,-105 15,-85 -10,-65" fill="#1a1a1a" opacity="0.7"/>
-        <path d="M -40,-40 L -40,40 L -120,40 Q -130,40 -130,30 L -130,-30 Q -130,-40 -120,-40 Z" fill="#1E90FF" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
-        <rect x="-105" y="-20" width="30" height="40" rx="2" fill="#1a1a1a" opacity="0.7"/>
-        <line x1="-95" y1="-10" x2="-80" y2="-10" stroke="#000" stroke-width="2"/>
-        <line x1="-95" y1="0" x2="-80" y2="0" stroke="#000" stroke-width="2"/>
-        <path d="M 40,-40 L 40,40 L 120,40 Q 130,40 130,30 L 130,-30 Q 130,-40 120,-40 Z" fill="#DC143C" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
-        <circle cx="85" cy="0" r="22" fill="#1a1a1a" opacity="0.7"/>
-        <circle cx="85" cy="0" r="10" fill="#DC143C"/>
-        <circle cx="85" cy="-12" r="3" fill="#000"/>
-        <circle cx="85" cy="12" r="3" fill="#000"/>
-        <path d="M -40,40 L 40,40 L 40,120 Q 40,130 30,130 L -30,130 Q -40,130 -40,120 Z" fill="#228B22" filter="url(#glassEffect)" stroke="#1a1a1a" stroke-width="2"/>
-        <rect x="-25" y="65" width="50" height="35" rx="3" fill="#1a1a1a" opacity="0.7"/>
-        <circle cx="0" cy="82.5" r="8" fill="#228B22"/>
-        <line x1="-40" y1="-40" x2="40" y2="40" stroke="#1a1a1a" stroke-width="2"/>
-        <line x1="40" y1="-40" x2="-40" y2="40" stroke="#1a1a1a" stroke-width="2"/>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="265 50 270 270" style="display:block;margin:0 auto;height:100px;width:auto;">
+      <g transform="translate(400, 180)">
+        <rect x="-35" y="-130" width="70" height="85" rx="15" fill="#FBBC05" />
+        <circle cx="0" cy="-88" r="12" fill="none" stroke="#FFFFFF" stroke-width="4"/>
+        <path d="M 0,-76 V -100" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+        <rect x="-135" y="-35" width="85" height="70" rx="15" fill="#EA4335" />
+        <path d="M -105,-15 H -80 V 15 H -105 Z" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M -98,-5 H -87 M -98,5 H -87" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+        <rect x="50" y="-35" width="85" height="70" rx="15" fill="#4285F4" />
+        <polygon points="85,-12 105,0 85,12" fill="#FFFFFF" />
+        <rect x="-35" y="45" width="70" height="85" rx="15" fill="#34A853" />
+        <rect x="-18" y="75" width="36" height="25" rx="3" fill="none" stroke="#FFFFFF" stroke-width="4"/>
+        <circle cx="0" cy="87.5" r="5" fill="#FFFFFF"/>
       </g>
     </svg>
     <img id="qr-img" style="border-radius:12px" />
