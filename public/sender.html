@@ -282,12 +282,23 @@
         }
       });
 
+      function enableYoutube() {
+        const btn = document.getElementById('btn-youtube');
+        btn.disabled = false;
+        btn.classList.replace('btn-gray', 'btn-red');
+      }
+      function disableYoutube() {
+        const btn = document.getElementById('btn-youtube');
+        btn.disabled = true;
+        btn.classList.replace('btn-red', 'btn-gray');
+      }
+
       socket.on('receivers-online', ({ count }) => {
         receiverCount = count;
         setStatus('online', `${count} projetor${count > 1 ? 'es' : ''} conectado${count > 1 ? 's' : ''}`);
         btnShare.disabled = false;
         btnMedia.disabled = false;
-        document.getElementById('btn-youtube').disabled = false;
+        enableYoutube();
       });
 
       socket.on('receiver-joined', ({ receiverId }) => {
@@ -295,7 +306,7 @@
         setStatus('online', `${receiverCount} projetor${receiverCount > 1 ? 'es' : ''} conectado${receiverCount > 1 ? 's' : ''}`);
         btnShare.disabled = false;
         btnMedia.disabled = false;
-        document.getElementById('btn-youtube').disabled = false;
+        enableYoutube();
       });
 
       socket.on('receiver-left', ({ receiverId }) => {
@@ -313,7 +324,7 @@
         receiverCount = 0;
         setStatus('', 'Nenhum projetor conectado');
         btnShare.disabled = true; btnMedia.disabled = true;
-        document.getElementById('btn-youtube').disabled = true;
+        disableYoutube();
         updateReceiversUI();
         stopAll();
       });
